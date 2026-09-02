@@ -4,21 +4,12 @@ import UploadForm from '@/components/UploadForm';
 import { getBirthdayStatus } from '@/lib/birthday';
 
 export default function Home() {
-  const status = getBirthdayStatus();
-  const isBirthday = status.type === 'birthday';
+  // Birthday → celebrate (cake + fireworks modal). Otherwise straight to memories.
+  const isBirthday = getBirthdayStatus().type === 'birthday';
 
   return (
     <main className="min-h-full">
       {isBirthday && <BirthdayModal />}
-
-      {!isBirthday && (
-        <div className="bg-gradient-to-b from-[#fff1f2] to-[#fff7f0] px-6 pb-8 pt-8 text-center">
-          <p className="inline-block rounded-full bg-white px-6 py-3 text-lg text-slate-700 shadow-sm ring-1 ring-pink-100">
-            🎂 距离你的生日还有{' '}
-            <span className="font-bold text-pink-500">{status.daysUntil}</span> 天
-          </p>
-        </div>
-      )}
 
       <section id="memories" className="px-4 py-12 sm:px-6">
         <div className="mx-auto mb-10 max-w-3xl text-center">
