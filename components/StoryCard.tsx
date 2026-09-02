@@ -16,6 +16,18 @@ function formatDate(dateStr: string | null): string | null {
   return `${y}年${m}月${d}日`;
 }
 
+// Photo grid shape: fixed-height region, tiles shrink as count grows so the
+// region stays the same size no matter how many photos a story has.
+function photoGrid(n: number): { cols: number; rows: number } {
+  if (n === 1) return { cols: 1, rows: 1 };
+  if (n === 2) return { cols: 2, rows: 1 };
+  if (n <= 4) return { cols: 2, rows: 2 };
+  if (n <= 6) return { cols: 3, rows: 2 };
+  return { cols: 3, rows: Math.ceil(n / 3) };
+}
+
+const PHOTO_REGION_HEIGHT = 240;
+
 export default function StoryCard({ story }: { story: Story }) {
   const originalImages = storyImages(story);
 
@@ -257,44 +269,38 @@ export default function StoryCard({ story }: { story: Story }) {
             <p className="mt-2 whitespace-pre-line leading-relaxed text-slate-600">{story.content}</p>
           )}
 
-          {originalImages.length === 1 && (
-            <div className="relative mt-3 h-56 w-full overflow-hidden rounded-xl">
-              <button
-                type="button"
-                className="block h-full w-full cursor-zoom-in"
-                onClick={() => setLightboxIndex(0)}
-                aria-label="查看大图"
-              >
-                <Image
-                  src={originalImages[0]}
-                  alt={story.title}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 500px"
-                  className="object-cover"
-                />
-              </button>
-            </div>
-          )}
-          {originalImages.length > 1 && (
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              {originalImages.map((url, i) => (
-                <button
-                  key={url}
-                  type="button"
-                  className="relative block h-40 w-full cursor-zoom-in overflow-hidden rounded-xl"
-                  onClick={() => setLightboxIndex(i)}
-                  aria-label="查看大图"
+          {originalImages.length > 0 && (
+            (() => {
+              const g = photoGrid(originalImages.length);
+              return (
+                <div
+                  className="mt-3 grid gap-1 overflow-hidden rounded-xl bg-pink-50"
+                  style={{
+                    height: PHOTO_REGION_HEIGHT,
+                    gridTemplateColumns: `repeat(${g.cols}, minmax(0, 1fr))`,
+                    gridTemplateRows: `repeat(${g.rows}, minmax(0, 1fr))`,
+                  }}
                 >
-                  <Image
-                    src={url}
-                    alt={story.title}
-                    fill
-                    sizes="(max-width: 768px) 100vw, 500px"
-                    className="object-cover"
-                  />
-                </button>
-              ))}
-            </div>
+                  {originalImages.map((url, i) => (
+                    <button
+                      key={url}
+                      type="button"
+                      className="relative block h-full w-full cursor-zoom-in overflow-hidden"
+                      onClick={() => setLightboxIndex(i)}
+                      aria-label="查看大图"
+                    >
+                      <Image
+                        src={url}
+                        alt={story.title}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 500px"
+                        className="object-cover transition hover:scale-105"
+                      />
+                    </button>
+                  ))}
+                </div>
+              );
+            })()
           )}
 
           {lightboxIndex !== null &&
