@@ -61,7 +61,6 @@ export default function UploadForm() {
   useEffect(() => {
     if (state.status === 'success') {
       formRef.current?.reset();
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear preview blob state after success
       setPreviewList([]);
       // eslint-disable-next-line react-hooks/set-state-in-effect -- clear date field after success
       setEventDate('');
