@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fff7f0;
+  --foreground: #2d2430;
 }
 
 @theme inline {
@@ -12,15 +12,75 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ---- Cake animations ---- */
+
+@keyframes cake-rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes flame-flicker {
+  0%, 100% {
+    transform: scaleY(1) scaleX(1);
+    opacity: 1;
+  }
+  25% {
+    transform: scaleY(1.15) scaleX(0.92);
+    opacity: 0.92;
+  }
+  50% {
+    transform: scaleY(0.92) scaleX(1.06);
+    opacity: 1;
+  }
+  75% {
+    transform: scaleY(1.08) scaleX(0.96);
+    opacity: 0.95;
+  }
+}
+
+@keyframes candle-glow {
+  0%, 100% {
+    box-shadow: 0 0 12px 3px rgba(255, 170, 60, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 22px 7px rgba(255, 170, 60, 0.8);
+  }
+}
+
+@keyframes cake-bob {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.cake-rise {
+  animation: cake-rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.cake-bob {
+  animation: cake-bob 3.2s ease-in-out infinite;
+}
+
+.flame {
+  animation: flame-flicker 0.9s ease-in-out infinite;
+  transform-origin: 50% 100%;
+}
+
+.candle-glow {
+  animation: candle-glow 1.6s ease-in-out infinite;
 }
