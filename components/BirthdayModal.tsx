@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Cake from './Cake';
 import Confetti from './Confetti';
+import { getAge } from '@/lib/birthday';
 
 // Birthday overlay: cake + fireworks only on the birthday itself, dismissible.
 export default function BirthdayModal() {
@@ -13,7 +14,7 @@ export default function BirthdayModal() {
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-y-auto bg-gradient-to-b from-[#fff1f2]/95 via-[#ffe4e6]/95 to-[#fff7f0]/95 px-6 py-10 backdrop-blur-sm">
       <Confetti />
-      <Cake />
+      <Cake age={getAge()} />
       <h1 className="mt-8 text-3xl font-bold text-slate-800 sm:text-4xl">生日快乐!🎉</h1>
       <p className="mt-3 max-w-md text-center text-lg text-slate-600">
         农历七月廿一,又一年的今天。

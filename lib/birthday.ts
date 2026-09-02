@@ -5,9 +5,18 @@ const LUNAR_MONTH = 7;
 const LUNAR_DAY = 21;
 const TIME_ZONE = 'Asia/Shanghai';
 
+// Birth year → turns 30 in 2026, 31 in 2027, etc. Adjust if wrong.
+export const BIRTH_YEAR = 1996;
+
 export type BirthdayStatus =
   | { type: 'birthday'; today: string }
   | { type: 'countdown'; today: string; target: string; daysUntil: number };
+
+/** Age reached on the lunar birthday in the current year (China timezone). */
+export function getAge(now: Date = new Date()): number {
+  const year = Number(todayInChina(now).slice(0, 4));
+  return year - BIRTH_YEAR;
+}
 
 /** Current date (YYYY-MM-DD) in China timezone, independent of server locale. */
 function todayInChina(now: Date): string {

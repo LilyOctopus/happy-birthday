@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 
 // Pure CSS birthday cake: two tiers, icing drips, glowing candles + flickering flames.
-export default function Cake() {
+export default function Cake({ age = 30 }: { age?: number }) {
   // Candle heights alternate slightly for a lively look.
   const candles = useMemo(
     () => [
@@ -48,9 +48,9 @@ export default function Cake() {
             </div>
           </div>
         ))}
-        {/* "30" badge */}
+        {/* Age badge */}
         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-white/90 px-3 py-0.5 text-xl font-bold text-[#e11d48] shadow-sm">
-          30
+          {age}
         </div>
       </div>
 
