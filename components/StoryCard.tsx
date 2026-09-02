@@ -75,8 +75,13 @@ export default function StoryCard({ story }: { story: Story }) {
     setNewFiles((prev) => [...prev, ...files]);
     setNewPreviews((prev) => [...prev, ...files.map((f) => URL.createObjectURL(f))]);
     if (!eventDate && files.length > 0) {
-      const date = await extractDateFromImage(files[0]);
-      if (date) setEventDate(date);
+      for (const file of files) {
+        const date = await extractDateFromImage(file);
+        if (date) {
+          setEventDate(date);
+          break;
+        }
+      }
     }
   }
 

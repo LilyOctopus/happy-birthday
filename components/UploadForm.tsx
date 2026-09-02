@@ -44,10 +44,15 @@ export default function UploadForm() {
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     setPreviewList(files.map((f) => URL.createObjectURL(f)));
-    // Auto-fill date from the first image's filename/EXIF (only if not set manually).
+    // Auto-fill date from the first image that carries one (only if not set manually).
     if (!eventDate && files.length > 0) {
-      const date = await extractDateFromImage(files[0]);
-      if (date) setEventDate(date);
+      for (const file of files) {
+        const date = await extractDateFromImage(file);
+        if (date) {
+          setEventDate(date);
+          break;
+        }
+      }
     }
   }
 
