@@ -1,5 +1,6 @@
 import { createSupabasePublic } from '@/lib/supabase-public';
 import StoryCard from '@/components/StoryCard';
+import StaggeredTimeline from '@/components/StaggeredTimeline';
 import type { Story } from '@/lib/types';
 
 async function getStories(): Promise<Story[]> {
@@ -46,27 +47,8 @@ export default async function Timeline() {
         ))}
       </div>
 
-      {/* Desktop: staggered two columns */}
-      <div className="hidden gap-x-12 pb-24 md:grid md:grid-cols-2">
-        <div className="flex flex-col gap-6">
-          {left.map((story) => (
-            <div key={story.id} className="relative">
-              {/* Dot sits on the center spine: for left-column cards that's the right edge. */}
-              <div className="absolute left-full top-6 hidden h-4 w-4 -translate-x-1/2 rounded-full border-2 border-pink-400 bg-white md:block" />
-              <StoryCard story={story} />
-            </div>
-          ))}
-        </div>
-        <div className="flex flex-col gap-6 md:translate-y-14">
-          {right.map((story) => (
-            <div key={story.id} className="relative">
-              {/* Dot on the spine: for right-column cards that's the left edge. */}
-              <div className="absolute left-0 top-6 hidden h-4 w-4 -translate-x-1/2 rounded-full border-2 border-pink-400 bg-white md:block" />
-              <StoryCard story={story} />
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* Desktop: staggered two columns (offset = half the first left card) */}
+      <StaggeredTimeline left={left} right={right} />
     </div>
   );
 }
