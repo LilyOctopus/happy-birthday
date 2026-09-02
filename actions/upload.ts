@@ -35,10 +35,25 @@ function checkPassword(formData: FormData): { ok: true } | { ok: false; message:
   return { ok: true };
 }
 
+/** All image files attached under the `images` field. */
+function getImageFiles(formData: FormData): File[] {
+  return formData
+    .getAll('images')
+    .filter((f): f is File => f instanceof File && f.size > 0);
+}
+
+/** URLs marked for removal on edit (sent as repeated `remove_image` fields). */
+function getRemovals(formData: FormData): string[] {
+  return formData
+    .getAll('remove_image')
+    .map((v) => String(v))
+    .filter(Boolean);
+}
+
 /**
- * Resolve the event date: manual input wins; otherwise derive from the image
- * filename (EXIF is gone by the time it reaches the server, so filename is the
- * only signal). A photo with no derivable date forces a manual entry.
+ * Resolve the event date: manual input wins; otherwise derive from the first
+ * image filename that carries one (EXIF is gone by the time it reaches the
+ * server). A photo set with no derivable date forces a manual entry.
  */
 function resolveEventDate(formData: FormData): string | null | { error: string } {
   const eventDate = String(formData.get('event_date') ?? '').trim() || null;
@@ -47,13 +62,13 @@ function resolveEventDate(formData: FormData): string | null | { error: string }
   }
   if (eventDate) return eventDate;
 
-  const file = formData.get('image');
-  if (file instanceof File && file.size > 0) {
-    const fromName = parseDateFromFilename(file.name);
-    if (!fromName) {
-      return { error: '无法从照片识别日期,请手动填写发生日期' };
+  const files = getImageFiles(formData);
+  if (files.length > 0) {
+    for (const file of files) {
+      const fromName = parseDateFromFilename(file.name);
+      if (fromName) return fromName;
     }
-    return fromName;
+    return { error: '无法从照片识别日期,请手动填写发生日期' };
   }
   return null; // text-only story → date optional
 }
@@ -67,12 +82,36 @@ function storagePathFromUrl(url: string): string | null {
 
 async function removeImageIfExists(
   sb: NonNullable<ReturnType<typeof createSupabaseAdmin>>,
-  url: string | null
+  url: string | null | undefined
 ): Promise<void> {
   const path = url ? storagePathFromUrl(url) : null;
   if (path) {
     await sb.storage.from('birthday-images').remove([path]);
   }
+}
+
+type AdminClient = NonNullable<ReturnType<typeof createSupabaseAdmin>>;
+
+/** Upload one image file to storage, returning its public URL or an error. */
+async function uploadOneImage(
+  sb: AdminClient,
+  file: File
+): Promise<{ url: string } | { error: string }> {
+  const bytes = Buffer.from(await file.arrayBuffer());
+  if (bytes.length > MAX_IMAGE_BYTES) {
+    return { error: '图片过大,请压缩后重试(每张需小于 4MB)' };
+  }
+  const ext = EXT_BY_MIME[file.type] ?? 'jpg';
+  const path = `memories/${Date.now()}-${randomUUID()}.${ext}`;
+  const { error: upErr } = await sb.storage
+    .from('birthday-images')
+    .upload(path, bytes, { contentType: file.type });
+  if (upErr) {
+    console.error('[upload] storage error:', upErr.message);
+    return { error: '图片上传失败,请稍后再试' };
+  }
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  return { url: `${url}/storage/v1/object/public/birthday-images/${path}` };
 }
 
 export async function uploadStory(
@@ -93,44 +132,23 @@ export async function uploadStory(
   }
   const eventDate = resolvedDate;
 
-  const file = formData.get('image');
-  let imageUrl: string | null = null;
-
-  if (file instanceof File && file.size > 0) {
-    const bytes = Buffer.from(await file.arrayBuffer());
-    if (bytes.length > MAX_IMAGE_BYTES) {
-      return { status: 'error', message: '图片过大,请压缩后重试(需小于 4MB)' };
-    }
-    const ext = EXT_BY_MIME[file.type] ?? 'jpg';
-    const path = `memories/${Date.now()}-${randomUUID()}.${ext}`;
-
-    const sb = createSupabaseAdmin();
-    if (!sb) {
-      return { status: 'error', message: 'Supabase 未配置,无法上传图片' };
-    }
-
-    const { error: uploadError } = await sb.storage
-      .from('birthday-images')
-      .upload(path, bytes, { contentType: file.type });
-
-    if (uploadError) {
-      console.error('[upload] storage error:', uploadError.message);
-      return { status: 'error', message: '图片上传失败,请稍后再试' };
-    }
-
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    imageUrl = `${url}/storage/v1/object/public/birthday-images/${path}`;
-  }
-
   const sb = createSupabaseAdmin();
   if (!sb) {
     return { status: 'error', message: 'Supabase 未配置,无法保存记录' };
   }
 
+  const files = getImageFiles(formData);
+  const imageUrls: string[] = [];
+  for (const file of files) {
+    const result = await uploadOneImage(sb, file);
+    if ('error' in result) return { status: 'error', message: result.error };
+    imageUrls.push(result.url);
+  }
+
   const { error: insertError } = await sb.from('stories').insert({
     title,
     content: content || null,
-    image_url: imageUrl,
+    image_urls: imageUrls.length > 0 ? imageUrls : null,
     event_date: eventDate,
   });
 
@@ -165,37 +183,36 @@ export async function updateStory(
 
   const { data: existing } = await sb
     .from('stories')
-    .select('image_url')
+    .select('image_url, image_urls')
     .eq('id', storyId)
     .single();
 
-  let imageUrl: string | null = existing?.image_url ?? null;
-  const file = formData.get('image');
+  // Merge legacy image_url into the list, drop removals, upload new files.
+  let kept: string[] = [
+    ...(existing?.image_urls ?? []),
+    ...(existing?.image_url ? [existing.image_url] : []),
+  ];
+  const removals = getRemovals(formData);
+  for (const removal of removals) {
+    kept = kept.filter((url) => url !== removal);
+    await removeImageIfExists(sb, removal);
+  }
 
-  if (file instanceof File && file.size > 0) {
-    const bytes = Buffer.from(await file.arrayBuffer());
-    if (bytes.length > MAX_IMAGE_BYTES) {
-      return { status: 'error', message: '图片过大,请压缩后重试(需小于 4MB)' };
-    }
-    const ext = EXT_BY_MIME[file.type] ?? 'jpg';
-    const path = `memories/${Date.now()}-${randomUUID()}.${ext}`;
-    const { error: upErr } = await sb.storage
-      .from('birthday-images')
-      .upload(path, bytes, { contentType: file.type });
-    if (upErr) {
-      console.error('[update] storage error:', upErr.message);
-      return { status: 'error', message: '图片上传失败,请稍后再试' };
-    }
-    const newUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/birthday-images/${path}`;
-    if (existing?.image_url && existing.image_url !== newUrl) {
-      await removeImageIfExists(sb, existing.image_url);
-    }
-    imageUrl = newUrl;
+  for (const file of getImageFiles(formData)) {
+    const result = await uploadOneImage(sb, file);
+    if ('error' in result) return { status: 'error', message: result.error };
+    kept.push(result.url);
   }
 
   const { error } = await sb
     .from('stories')
-    .update({ title, content: content || null, image_url: imageUrl, event_date: eventDate })
+    .update({
+      title,
+      content: content || null,
+      image_urls: kept.length > 0 ? kept : null,
+      image_url: null,
+      event_date: eventDate,
+    })
     .eq('id', storyId);
 
   if (error) {
@@ -220,7 +237,7 @@ export async function deleteStory(
 
   const { data: existing } = await sb
     .from('stories')
-    .select('image_url')
+    .select('image_url, image_urls')
     .eq('id', storyId)
     .single();
 
@@ -230,9 +247,10 @@ export async function deleteStory(
     return { status: 'error', message: '删除失败,请稍后再试' };
   }
 
-  if (existing?.image_url) {
-    await removeImageIfExists(sb, existing.image_url);
+  for (const url of existing?.image_urls ?? []) {
+    await removeImageIfExists(sb, url);
   }
+  await removeImageIfExists(sb, existing?.image_url);
 
   revalidatePath('/');
   return { status: 'success' };

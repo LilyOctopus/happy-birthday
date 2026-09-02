@@ -11,7 +11,7 @@ const initial: UploadState = { status: 'idle' };
 export default function UploadForm() {
   const [state, formAction, pending] = useActionState(uploadStory, initial);
   const [open, setOpen] = useState(false);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [previewList, setPreviewList] = useState<string[]>([]);
   const [localError, setLocalError] = useState<string | null>(null);
   const [eventDate, setEventDate] = useState('');
   const formRef = useRef<HTMLFormElement>(null);
@@ -21,12 +21,17 @@ export default function UploadForm() {
     setLocalError(null);
 
     const fd = new FormData(e.currentTarget);
-    const file = fd.get('image');
+    const files = fd
+      .getAll('images')
+      .filter((f): f is File => f instanceof File && f.size > 0);
 
     try {
-      if (file instanceof File && file.size > 0) {
-        const compressed = await compressImage(file);
-        fd.set('image', compressed, file.name);
+      if (files.length > 0) {
+        fd.delete('images');
+        for (const file of files) {
+          const compressed = await compressImage(file);
+          fd.append('images', compressed, file.name);
+        }
       }
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : '图片处理失败');
@@ -37,15 +42,11 @@ export default function UploadForm() {
   }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) {
-      setPreview(null);
-      return;
-    }
-    setPreview(URL.createObjectURL(file));
-    // Auto-fill date from filename or EXIF (only if not already set manually).
-    if (!eventDate) {
-      const date = await extractDateFromImage(file);
+    const files = Array.from(e.target.files ?? []);
+    setPreviewList(files.map((f) => URL.createObjectURL(f)));
+    // Auto-fill date from the first image's filename/EXIF (only if not set manually).
+    if (!eventDate && files.length > 0) {
+      const date = await extractDateFromImage(files[0]);
       if (date) setEventDate(date);
     }
   }
@@ -55,7 +56,7 @@ export default function UploadForm() {
     if (state.status === 'success') {
       formRef.current?.reset();
       // eslint-disable-next-line react-hooks/set-state-in-effect -- clear preview blob state after success
-      setPreview(null);
+      setPreviewList([]);
     }
   }, [state.status]);
 
@@ -69,7 +70,7 @@ export default function UploadForm() {
           type="button"
           onClick={() => {
             setOpen(true);
-            setPreview(null);
+            setPreviewList([]);
           }}
           className="rounded-full bg-pink-500 px-6 py-2.5 font-medium text-white shadow-sm transition hover:bg-pink-600"
         >
@@ -145,21 +146,29 @@ export default function UploadForm() {
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-600">照片(可选)</label>
+              <label className="mb-1 block text-sm font-medium text-slate-600">
+                照片(可选,可多选)
+              </label>
               <input
                 type="file"
-                name="image"
+                name="images"
                 accept="image/*"
+                multiple
                 onChange={handleFileChange}
                 className="block w-full text-sm text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-pink-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-pink-600 hover:file:bg-pink-100"
               />
-              {preview && (
-                // eslint-disable-next-line @next/next/no-img-element -- blob URL preview, next/image can't optimize object URLs
-                <img
-                  src={preview}
-                  alt="预览"
-                  className="mt-3 h-40 w-full rounded-lg object-cover"
-                />
+              {previewList.length > 0 && (
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  {previewList.map((url, i) => (
+                    // eslint-disable-next-line @next/next/no-img-element -- blob URL preview, next/image can't optimize object URLs
+                    <img
+                      key={i}
+                      src={url}
+                      alt="预览"
+                      className="h-24 w-full rounded-lg object-cover"
+                    />
+                  ))}
+                </div>
               )}
             </div>
 

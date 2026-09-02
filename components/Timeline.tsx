@@ -7,7 +7,7 @@ async function getStories(): Promise<Story[]> {
   if (!sb) return [];
   const { data, error } = await sb
     .from('stories')
-    .select('id, title, content, image_url, event_date, created_at')
+    .select('id, title, content, image_url, image_urls, event_date, created_at')
     .order('event_date', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false });
 
@@ -34,7 +34,7 @@ export default async function Timeline() {
       {/* Center spine (hidden on mobile) */}
       <div className="absolute inset-y-0 left-1/2 hidden w-px -translate-x-1/2 bg-pink-200 md:block" />
 
-      <ol className="space-y-10">
+      <ol className="space-y-8">
         {stories.map((story, i) => {
           const leftSide = i % 2 === 0;
           return (
@@ -43,7 +43,7 @@ export default async function Timeline() {
               <div className="absolute left-1/2 top-6 hidden h-4 w-4 -translate-x-1/2 rounded-full border-2 border-pink-400 bg-white md:block" />
 
               <div
-                className={`ml-6 md:ml-0 md:w-[calc(50%-2rem)] ${
+                className={`ml-6 md:ml-0 md:w-[calc(42%-1.5rem)] ${
                   leftSide ? 'md:mr-auto' : 'md:ml-auto'
                 }`}
               >
