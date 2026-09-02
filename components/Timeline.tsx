@@ -51,7 +51,8 @@ export default async function Timeline() {
         <div className="flex flex-col gap-6">
           {left.map((story) => (
             <div key={story.id} className="relative">
-              <div className="absolute left-1/2 top-6 hidden h-4 w-4 -translate-x-1/2 rounded-full border-2 border-pink-400 bg-white md:block" />
+              {/* Dot sits on the center spine: for left-column cards that's the right edge. */}
+              <div className="absolute left-full top-6 hidden h-4 w-4 -translate-x-1/2 rounded-full border-2 border-pink-400 bg-white md:block" />
               <StoryCard story={story} />
             </div>
           ))}
@@ -59,7 +60,8 @@ export default async function Timeline() {
         <div className="flex flex-col gap-6 md:translate-y-14">
           {right.map((story) => (
             <div key={story.id} className="relative">
-              <div className="absolute left-1/2 top-6 hidden h-4 w-4 -translate-x-1/2 rounded-full border-2 border-pink-400 bg-white md:block" />
+              {/* Dot on the spine: for right-column cards that's the left edge. */}
+              <div className="absolute left-0 top-6 hidden h-4 w-4 -translate-x-1/2 rounded-full border-2 border-pink-400 bg-white md:block" />
               <StoryCard story={story} />
             </div>
           ))}
