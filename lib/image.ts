@@ -1,7 +1,9 @@
 // Client-side image compression before upload (keeps payload under serverless limits).
 
-const MAX_DIMENSION = 1600;
-const QUALITY = 0.82;
+// Aggressive compression: timeline shows 160-256px thumbs and a ~800px lightbox,
+// so 1280px @ 0.72 keeps several photos under the 1MB server-action limit.
+const MAX_DIMENSION = 1280;
+const QUALITY = 0.72;
 
 /** Downscale + re-encode an image file to JPEG/WebP blob. Throws if unreadable. */
 export async function compressImage(file: File): Promise<Blob> {

@@ -10,6 +10,12 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  experimental: {
+    serverActions: {
+      // Allow multi-photo uploads (client compresses each image before sending).
+      bodySizeLimit: "4.5mb",
+    },
+  },
 };
 
 export default nextConfig;
