@@ -3,6 +3,9 @@ import Timeline from '@/components/Timeline';
 import UploadForm from '@/components/UploadForm';
 import { getBirthdayStatus } from '@/lib/birthday';
 
+// Server-render on every request so memories added anywhere show up immediately.
+export const dynamic = 'force-dynamic';
+
 export default function Home() {
   // Birthday → celebrate (cake + fireworks modal). Otherwise straight to memories.
   const isBirthday = getBirthdayStatus().type === 'birthday';
