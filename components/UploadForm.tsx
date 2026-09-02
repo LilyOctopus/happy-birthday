@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { uploadStory } from '@/actions/upload';
 import { compressImage } from '@/lib/image';
+import { extractDateFromImage } from '@/lib/exif-date';
 import type { UploadState } from '@/lib/types';
 
 const initial: UploadState = { status: 'idle' };
@@ -12,6 +13,7 @@ export default function UploadForm() {
   const [open, setOpen] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [eventDate, setEventDate] = useState('');
   const formRef = useRef<HTMLFormElement>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -34,14 +36,18 @@ export default function UploadForm() {
     formAction(fd);
   }
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) {
       setPreview(null);
       return;
     }
-    const url = URL.createObjectURL(file);
-    setPreview(url);
+    setPreview(URL.createObjectURL(file));
+    // Auto-fill date from filename or EXIF (only if not already set manually).
+    if (!eventDate) {
+      const date = await extractDateFromImage(file);
+      if (date) setEventDate(date);
+    }
   }
 
   // Reset the form after a successful upload so the next entry starts clean.
@@ -120,6 +126,8 @@ export default function UploadForm() {
                 <input
                   type="date"
                   name="event_date"
+                  value={eventDate}
+                  onChange={(e) => setEventDate(e.target.value)}
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-pink-400"
                 />
               </div>

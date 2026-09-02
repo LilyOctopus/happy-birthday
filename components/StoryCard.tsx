@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { useActionState, useState } from 'react';
 import { updateStory, deleteStory } from '@/actions/upload';
 import { compressImage } from '@/lib/image';
+import { extractDateFromImage } from '@/lib/exif-date';
 import type { Story, UploadState } from '@/lib/types';
 
 const initial: UploadState = { status: 'idle' };
@@ -19,6 +20,7 @@ export default function StoryCard({ story }: { story: Story }) {
   const [deleting, setDeleting] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [eventDate, setEventDate] = useState(story.event_date ?? '');
 
   const [editState, editAction, editPending] = useActionState(
     (_p: UploadState, fd: FormData) => updateStory(story.id, _p, fd),
@@ -33,6 +35,7 @@ export default function StoryCard({ story }: { story: Story }) {
     e.preventDefault();
     setLocalError(null);
     const fd = new FormData(e.currentTarget);
+    fd.set('event_date', eventDate);
     const file = fd.get('image');
     try {
       if (file instanceof File && file.size > 0) {
@@ -46,9 +49,14 @@ export default function StoryCard({ story }: { story: Story }) {
     editAction(fd);
   }
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     setPreview(file ? URL.createObjectURL(file) : null);
+    // Auto-fill date from filename or EXIF (only if not already set).
+    if (file && !eventDate) {
+      const date = await extractDateFromImage(file);
+      if (date) setEventDate(date);
+    }
   }
 
   const editError = editState.status === 'error' ? editState.message : localError;
@@ -63,7 +71,13 @@ export default function StoryCard({ story }: { story: Story }) {
           <p className="text-sm font-medium text-slate-600">编辑回忆</p>
           <input type="password" name="password" required autoComplete="off" placeholder="上传密码 *" className={inputCls} />
           <input type="text" name="title" required maxLength={80} defaultValue={story.title} className={inputCls} placeholder="标题" />
-          <input type="date" name="event_date" defaultValue={story.event_date ?? ''} className={inputCls} />
+          <input
+            type="date"
+            name="event_date"
+            value={eventDate}
+            onChange={(e) => setEventDate(e.target.value)}
+            className={inputCls}
+          />
           <textarea name="content" rows={3} defaultValue={story.content ?? ''} maxLength={2000} className={`${inputCls} resize-y`} placeholder="小故事" />
           <input type="file" name="image" accept="image/*" onChange={handleFileChange} className="block w-full text-sm text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-pink-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-pink-600 hover:file:bg-pink-100" />
           {preview && (

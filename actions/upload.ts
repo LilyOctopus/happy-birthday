@@ -3,6 +3,7 @@
 import { createHash, timingSafeEqual, randomUUID } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
 import { createSupabaseAdmin } from '@/lib/supabase';
+import { parseDateFromFilename } from '@/lib/date';
 import type { UploadState } from '@/lib/types';
 
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // Vercel serverless body limit safety margin
@@ -34,6 +35,29 @@ function checkPassword(formData: FormData): { ok: true } | { ok: false; message:
   return { ok: true };
 }
 
+/**
+ * Resolve the event date: manual input wins; otherwise derive from the image
+ * filename (EXIF is gone by the time it reaches the server, so filename is the
+ * only signal). A photo with no derivable date forces a manual entry.
+ */
+function resolveEventDate(formData: FormData): string | null | { error: string } {
+  const eventDate = String(formData.get('event_date') ?? '').trim() || null;
+  if (eventDate && !/^\d{4}-\d{2}-\d{2}$/.test(eventDate)) {
+    return { error: '日期格式不正确' };
+  }
+  if (eventDate) return eventDate;
+
+  const file = formData.get('image');
+  if (file instanceof File && file.size > 0) {
+    const fromName = parseDateFromFilename(file.name);
+    if (!fromName) {
+      return { error: '无法从照片识别日期,请手动填写发生日期' };
+    }
+    return fromName;
+  }
+  return null; // text-only story → date optional
+}
+
 /** Extract the storage path from a public object URL, if it belongs to our bucket. */
 function storagePathFromUrl(url: string): string | null {
   const marker = '/object/public/birthday-images/';
@@ -63,10 +87,11 @@ export async function uploadStory(
     return { status: 'error', message: '请填写标题' };
   }
   const content = String(formData.get('content') ?? '').trim();
-  const eventDate = String(formData.get('event_date') ?? '').trim() || null;
-  if (eventDate && !/^\d{4}-\d{2}-\d{2}$/.test(eventDate)) {
-    return { status: 'error', message: '日期格式不正确' };
+  const resolvedDate = resolveEventDate(formData);
+  if (resolvedDate && typeof resolvedDate !== 'string') {
+    return { status: 'error', message: resolvedDate.error };
   }
+  const eventDate = resolvedDate;
 
   const file = formData.get('image');
   let imageUrl: string | null = null;
@@ -129,10 +154,11 @@ export async function updateStory(
   const title = String(formData.get('title') ?? '').trim();
   if (!title) return { status: 'error', message: '请填写标题' };
   const content = String(formData.get('content') ?? '').trim();
-  const eventDate = String(formData.get('event_date') ?? '').trim() || null;
-  if (eventDate && !/^\d{4}-\d{2}-\d{2}$/.test(eventDate)) {
-    return { status: 'error', message: '日期格式不正确' };
+  const resolvedDate = resolveEventDate(formData);
+  if (resolvedDate && typeof resolvedDate !== 'string') {
+    return { status: 'error', message: resolvedDate.error };
   }
+  const eventDate = resolvedDate;
 
   const sb = createSupabaseAdmin();
   if (!sb) return { status: 'error', message: 'Supabase 未配置,无法保存记录' };
