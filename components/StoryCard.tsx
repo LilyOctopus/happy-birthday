@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useActionState, useTransition, useState } from 'react';
+import { useActionState, useTransition, useState, useEffect } from 'react';
 import { updateStory, deleteStory } from '@/actions/upload';
 import { compressImage } from '@/lib/image';
 import { extractDateFromImage } from '@/lib/exif-date';
@@ -31,11 +31,11 @@ export default function StoryCard({ story }: { story: Story }) {
   const [newPreviews, setNewPreviews] = useState<string[]>([]);
   const [localError, setLocalError] = useState<string | null>(null);
 
-  const [editState, editAction, editPending] = useActionState(
+  const [editState, editAction] = useActionState(
     (_p: UploadState, fd: FormData) => updateStory(story.id, _p, fd),
     initial
   );
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
   const [delState, delAction, delPending] = useActionState(
     (_p: UploadState, fd: FormData) => deleteStory(story.id, _p, fd),
     initial
@@ -86,17 +86,37 @@ export default function StoryCard({ story }: { story: Story }) {
     }
   }
 
+  function enterEdit() {
+    setPassword('');
+    setTitle(story.title);
+    setContent(story.content ?? '');
+    setEventDate(story.event_date ?? '');
+    setImages(storyImages(story));
+    setNewFiles([]);
+    setNewPreviews([]);
+    setLocalError(null);
+    setEditing(true);
+  }
+
   function cancelEdit() {
     setEditing(false);
     setPassword('');
     setTitle(story.title);
     setContent(story.content ?? '');
     setEventDate(story.event_date ?? '');
-    setImages(originalImages);
+    setImages(storyImages(story));
     setNewFiles([]);
     setNewPreviews([]);
     setLocalError(null);
   }
+
+  // After a successful save, leave the edit form so the refreshed story shows.
+  useEffect(() => {
+    if (editState.status === 'success') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- close edit form after save
+      setEditing(false);
+    }
+  }, [editState.status]);
 
   const editError = editState.status === 'error' ? editState.message : localError;
   const date = formatDate(story.event_date);
@@ -195,10 +215,13 @@ export default function StoryCard({ story }: { story: Story }) {
           <div className="flex gap-2">
             <button
               type="submit"
-              disabled={editPending}
-              className="rounded-full bg-pink-500 px-5 py-2 text-sm font-medium text-white transition hover:bg-pink-600 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isPending}
+              className="flex items-center gap-1.5 rounded-full bg-pink-500 px-5 py-2 text-sm font-medium text-white transition hover:bg-pink-600 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {editPending ? '保存中…' : '保存'}
+              {isPending && (
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              )}
+              {isPending ? '保存中…' : '保存'}
             </button>
             <button
               type="button"
@@ -247,7 +270,7 @@ export default function StoryCard({ story }: { story: Story }) {
           <div className="mt-3 flex gap-4 text-sm">
             <button
               type="button"
-              onClick={() => setEditing(true)}
+              onClick={enterEdit}
               className="text-pink-500 transition hover:text-pink-600"
             >
               编辑
