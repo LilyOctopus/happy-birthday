@@ -43,7 +43,7 @@ export default async function Timeline() {
               <div className="absolute left-1/2 top-6 hidden h-4 w-4 -translate-x-1/2 rounded-full border-2 border-pink-400 bg-white md:block" />
 
               <div
-                className={`ml-6 md:ml-0 md:w-[calc(42%-1.5rem)] ${
+                className={`ml-6 md:ml-0 md:w-[calc(66.66%-1.5rem)] ${
                   leftSide ? 'md:mr-auto' : 'md:ml-auto'
                 }`}
               >
