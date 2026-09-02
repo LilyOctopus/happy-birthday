@@ -274,7 +274,7 @@ export default function StoryCard({ story }: { story: Story }) {
               const g = photoGrid(originalImages.length);
               return (
                 <div
-                  className="mt-3 grid gap-1 overflow-hidden rounded-xl bg-pink-50"
+                  className="mt-3 grid gap-1 overflow-hidden rounded-xl"
                   style={{
                     height: PHOTO_REGION_HEIGHT,
                     gridTemplateColumns: `repeat(${g.cols}, minmax(0, 1fr))`,
