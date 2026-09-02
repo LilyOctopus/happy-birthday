@@ -18,7 +18,7 @@ export default function BirthdayModal() {
       <p className="mt-3 max-w-md text-center text-lg text-slate-600">
         农历七月廿一,又一年的今天。
         <br />
-        陪你走过的每段时光,都好好收着。
+        一起走过的每段时光,都好好收着。
       </p>
       <button
         type="button"
