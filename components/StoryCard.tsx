@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useActionState, useState } from 'react';
+import { useActionState, useTransition, useState } from 'react';
 import { updateStory, deleteStory } from '@/actions/upload';
 import { compressImage } from '@/lib/image';
 import { extractDateFromImage } from '@/lib/exif-date';
@@ -35,6 +35,7 @@ export default function StoryCard({ story }: { story: Story }) {
     (_p: UploadState, fd: FormData) => updateStory(story.id, _p, fd),
     initial
   );
+  const [, startTransition] = useTransition();
   const [delState, delAction, delPending] = useActionState(
     (_p: UploadState, fd: FormData) => deleteStory(story.id, _p, fd),
     initial
@@ -66,7 +67,7 @@ export default function StoryCard({ story }: { story: Story }) {
       return;
     }
 
-    editAction(fd);
+    startTransition(() => editAction(fd));
   }
 
   async function handleNewFiles(e: React.ChangeEvent<HTMLInputElement>) {

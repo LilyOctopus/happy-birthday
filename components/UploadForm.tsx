@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect, useRef, useState } from 'react';
+import { useActionState, useEffect, useRef, useState, useTransition } from 'react';
 import { uploadStory } from '@/actions/upload';
 import { compressImage } from '@/lib/image';
 import { extractDateFromImage } from '@/lib/exif-date';
@@ -10,6 +10,7 @@ const initial: UploadState = { status: 'idle' };
 
 export default function UploadForm() {
   const [state, formAction, pending] = useActionState(uploadStory, initial);
+  const [, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
   const [previewList, setPreviewList] = useState<string[]>([]);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -38,7 +39,7 @@ export default function UploadForm() {
       return;
     }
 
-    formAction(fd);
+    startTransition(() => formAction(fd));
   }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
