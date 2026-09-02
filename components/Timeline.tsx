@@ -29,30 +29,38 @@ export default async function Timeline() {
     );
   }
 
+  // Desktop: two staggered columns — the right column drops by half a card so
+  // rows interlock like a brick wall. Mobile: single column.
+  const left = stories.filter((_, i) => i % 2 === 0);
+  const right = stories.filter((_, i) => i % 2 === 1);
+
   return (
-    <div className="relative mx-auto max-w-3xl">
-      {/* Center spine (hidden on mobile) */}
+    <div className="relative mx-auto max-w-4xl">
+      {/* Center spine (desktop) */}
       <div className="absolute inset-y-0 left-1/2 hidden w-px -translate-x-1/2 bg-pink-200 md:block" />
 
-      <ol className="space-y-8">
-        {stories.map((story, i) => {
-          const leftSide = i % 2 === 0;
-          return (
-            <li key={story.id} className="relative">
-              {/* Node dot */}
-              <div className="absolute left-1/2 top-6 hidden h-4 w-4 -translate-x-1/2 rounded-full border-2 border-pink-400 bg-white md:block" />
+      {/* Mobile: single column */}
+      <div className="space-y-6 md:hidden">
+        {stories.map((story) => (
+          <StoryCard key={story.id} story={story} />
+        ))}
+      </div>
 
-              <div
-                className={`ml-6 md:ml-0 md:w-[calc(66.66%-1.5rem)] ${
-                  leftSide ? 'md:mr-auto' : 'md:ml-auto'
-                }`}
-              >
-                <StoryCard story={story} />
-              </div>
-            </li>
-          );
-        })}
-      </ol>
+      {/* Desktop: staggered two columns */}
+      <div className="hidden gap-x-12 pb-24 md:grid md:grid-cols-2">
+        <div className="flex flex-col gap-6">
+          {left.map((story) => (
+            <StoryCard key={story.id} story={story} />
+          ))}
+        </div>
+        <div className="flex flex-col gap-6">
+          {right.map((story) => (
+            <div key={story.id} className="md:translate-y-1/2">
+              <StoryCard story={story} />
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
