@@ -33,10 +33,17 @@ export default function StoryCard({ story }: { story: Story }) {
   const [localError, setLocalError] = useState<string | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
-  const [editState, editAction] = useActionState(
-    (_p: UploadState, fd: FormData) => updateStory(story.id, _p, fd),
-    initial
-  );
+  // Wrap the server action: on success, leave the edit form so the refreshed
+  // story is visible (done here, not in an effect, to avoid set-state-in-effect).
+  async function wrappedEdit(_prev: UploadState, fd: FormData): Promise<UploadState> {
+    const result = await updateStory(story.id, _prev, fd);
+    if (result.status === 'success') {
+      setEditing(false);
+    }
+    return result;
+  }
+
+  const [editState, editAction] = useActionState(wrappedEdit, initial);
   const [isPending, startTransition] = useTransition();
   const [delState, delAction, delPending] = useActionState(
     (_p: UploadState, fd: FormData) => deleteStory(story.id, _p, fd),
@@ -111,14 +118,6 @@ export default function StoryCard({ story }: { story: Story }) {
     setNewPreviews([]);
     setLocalError(null);
   }
-
-  // After a successful save, leave the edit form so the refreshed story shows.
-  useEffect(() => {
-    if (editState.status === 'success') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- close edit form after save
-      setEditing(false);
-    }
-  }, [editState.status]);
 
   // Lightbox keyboard controls: Esc closes, arrows navigate.
   useEffect(() => {
