@@ -30,6 +30,7 @@ export default function StoryCard({ story }: { story: Story }) {
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const [newPreviews, setNewPreviews] = useState<string[]>([]);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const [editState, editAction] = useActionState(
     (_p: UploadState, fd: FormData) => updateStory(story.id, _p, fd),
@@ -117,6 +118,22 @@ export default function StoryCard({ story }: { story: Story }) {
       setEditing(false);
     }
   }, [editState.status]);
+
+  // Lightbox keyboard controls: Esc closes, arrows navigate.
+  useEffect(() => {
+    if (lightboxIndex === null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLightboxIndex(null);
+      if (e.key === 'ArrowLeft' && lightboxIndex > 0) {
+        setLightboxIndex(lightboxIndex - 1);
+      }
+      if (e.key === 'ArrowRight' && lightboxIndex < originalImages.length - 1) {
+        setLightboxIndex(lightboxIndex + 1);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [lightboxIndex, originalImages.length]);
 
   const editError = editState.status === 'error' ? editState.message : localError;
   const date = formatDate(story.event_date);
@@ -242,19 +259,32 @@ export default function StoryCard({ story }: { story: Story }) {
 
           {originalImages.length === 1 && (
             <div className="relative mt-3 h-56 w-full overflow-hidden rounded-xl">
-              <Image
-                src={originalImages[0]}
-                alt={story.title}
-                fill
-                sizes="(max-width: 768px) 100vw, 500px"
-                className="object-cover"
-              />
+              <button
+                type="button"
+                className="block h-full w-full cursor-zoom-in"
+                onClick={() => setLightboxIndex(0)}
+                aria-label="查看大图"
+              >
+                <Image
+                  src={originalImages[0]}
+                  alt={story.title}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 500px"
+                  className="object-cover"
+                />
+              </button>
             </div>
           )}
           {originalImages.length > 1 && (
             <div className="mt-3 grid grid-cols-2 gap-2">
-              {originalImages.map((url) => (
-                <div key={url} className="relative h-40 w-full overflow-hidden rounded-xl">
+              {originalImages.map((url, i) => (
+                <button
+                  key={url}
+                  type="button"
+                  className="relative block h-40 w-full cursor-zoom-in overflow-hidden rounded-xl"
+                  onClick={() => setLightboxIndex(i)}
+                  aria-label="查看大图"
+                >
                   <Image
                     src={url}
                     alt={story.title}
@@ -262,8 +292,61 @@ export default function StoryCard({ story }: { story: Story }) {
                     sizes="(max-width: 768px) 100vw, 500px"
                     className="object-cover"
                   />
-                </div>
+                </button>
               ))}
+            </div>
+          )}
+
+          {lightboxIndex !== null && (
+            <div
+              className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-4"
+              onClick={() => setLightboxIndex(null)}
+            >
+              <button
+                type="button"
+                onClick={() => setLightboxIndex(null)}
+                className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-2xl text-white transition hover:bg-white/25"
+                aria-label="关闭"
+              >
+                ×
+              </button>
+              {lightboxIndex > 0 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setLightboxIndex(lightboxIndex - 1);
+                  }}
+                  className="absolute left-3 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-2xl text-white transition hover:bg-white/25"
+                  aria-label="上一张"
+                >
+                  ‹
+                </button>
+              )}
+              {lightboxIndex < originalImages.length - 1 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setLightboxIndex(lightboxIndex + 1);
+                  }}
+                  className="absolute right-3 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-2xl text-white transition hover:bg-white/25"
+                  aria-label="下一张"
+                >
+                  ›
+                </button>
+              )}
+              {/* eslint-disable-next-line @next/next/no-img-element -- lightbox full image */}
+              <img
+                src={originalImages[lightboxIndex]}
+                alt={story.title}
+                className="max-h-full max-w-full rounded-lg object-contain"
+              />
+              {originalImages.length > 1 && (
+                <span className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/50 px-3 py-1 text-sm text-white">
+                  {lightboxIndex + 1} / {originalImages.length}
+                </span>
+              )}
             </div>
           )}
 
