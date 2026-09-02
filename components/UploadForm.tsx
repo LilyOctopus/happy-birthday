@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect, useRef, useState, useTransition } from 'react';
+import { useActionState, useRef, useState, useTransition } from 'react';
 import { uploadStory } from '@/actions/upload';
 import { compressImage } from '@/lib/image';
 import { extractDateFromImage } from '@/lib/exif-date';
@@ -9,13 +9,26 @@ import type { UploadState } from '@/lib/types';
 const initial: UploadState = { status: 'idle' };
 
 export default function UploadForm() {
-  const [state, formAction, pending] = useActionState(uploadStory, initial);
-  const [, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
   const [previewList, setPreviewList] = useState<string[]>([]);
   const [localError, setLocalError] = useState<string | null>(null);
   const [eventDate, setEventDate] = useState('');
   const formRef = useRef<HTMLFormElement>(null);
+  const [, startTransition] = useTransition();
+
+  // Wrap the server action so a successful upload resets the form (date included)
+  // here in the action context instead of an effect.
+  async function wrappedSubmit(_prev: UploadState, fd: FormData): Promise<UploadState> {
+    const result = await uploadStory(_prev, fd);
+    if (result.status === 'success') {
+      formRef.current?.reset();
+      setPreviewList([]);
+      setEventDate('');
+    }
+    return result;
+  }
+
+  const [state, formAction, pending] = useActionState(wrappedSubmit, initial);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -56,16 +69,6 @@ export default function UploadForm() {
       }
     }
   }
-
-  // Reset the form after a successful upload so the next entry starts clean.
-  useEffect(() => {
-    if (state.status === 'success') {
-      formRef.current?.reset();
-      setPreviewList([]);
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear date field after success
-      setEventDate('');
-    }
-  }, [state.status]);
 
   const error = state.status === 'error' ? state.message : localError;
   const success = state.status === 'success';
