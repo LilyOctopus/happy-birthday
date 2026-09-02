@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { useActionState, useTransition, useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { updateStory, deleteStory } from '@/actions/upload';
 import { compressImage } from '@/lib/image';
 import { extractDateFromImage } from '@/lib/exif-date';
@@ -297,7 +298,8 @@ export default function StoryCard({ story }: { story: Story }) {
             </div>
           )}
 
-          {lightboxIndex !== null && (
+          {lightboxIndex !== null &&
+            createPortal(
             <div
               className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-4"
               onClick={() => setLightboxIndex(null)}
@@ -347,7 +349,8 @@ export default function StoryCard({ story }: { story: Story }) {
                   {lightboxIndex + 1} / {originalImages.length}
                 </span>
               )}
-            </div>
+            </div>,
+            document.body
           )}
 
           <div className="mt-3 flex gap-4 text-sm">
