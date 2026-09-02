@@ -50,12 +50,16 @@ export default async function Timeline() {
       <div className="hidden gap-x-12 pb-24 md:grid md:grid-cols-2">
         <div className="flex flex-col gap-6">
           {left.map((story) => (
-            <StoryCard key={story.id} story={story} />
+            <div key={story.id} className="relative">
+              <div className="absolute left-1/2 top-6 hidden h-4 w-4 -translate-x-1/2 rounded-full border-2 border-pink-400 bg-white md:block" />
+              <StoryCard story={story} />
+            </div>
           ))}
         </div>
         <div className="flex flex-col gap-6">
           {right.map((story) => (
-            <div key={story.id} className="md:translate-y-1/2">
+            <div key={story.id} className="relative md:translate-y-1/2">
+              <div className="absolute left-1/2 top-6 hidden h-4 w-4 -translate-x-1/2 rounded-full border-2 border-pink-400 bg-white md:block" />
               <StoryCard story={story} />
             </div>
           ))}
