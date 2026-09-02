@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useRef, useState } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
 import { uploadStory } from '@/actions/upload';
 import { compressImage } from '@/lib/image';
 import type { UploadState } from '@/lib/types';
@@ -43,6 +43,15 @@ export default function UploadForm() {
     const url = URL.createObjectURL(file);
     setPreview(url);
   }
+
+  // Reset the form after a successful upload so the next entry starts clean.
+  useEffect(() => {
+    if (state.status === 'success') {
+      formRef.current?.reset();
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear preview blob state after success
+      setPreview(null);
+    }
+  }, [state.status]);
 
   const error = state.status === 'error' ? state.message : localError;
   const success = state.status === 'success';
@@ -158,8 +167,11 @@ export default function UploadForm() {
             <button
               type="submit"
               disabled={pending}
-              className="w-full rounded-full bg-pink-500 py-2.5 font-medium text-white shadow-sm transition hover:bg-pink-600 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-pink-500 py-2.5 font-medium text-white shadow-sm transition hover:bg-pink-600 disabled:cursor-not-allowed disabled:opacity-60"
             >
+              {pending && (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              )}
               {pending ? '保存中…' : '保存回忆'}
             </button>
           </div>

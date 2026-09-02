@@ -1,5 +1,5 @@
-import Image from 'next/image';
 import { createSupabasePublic } from '@/lib/supabase-public';
+import StoryCard from '@/components/StoryCard';
 import type { Story } from '@/lib/types';
 
 async function getStories(): Promise<Story[]> {
@@ -16,12 +16,6 @@ async function getStories(): Promise<Story[]> {
     return [];
   }
   return (data ?? []) as Story[];
-}
-
-function formatDate(dateStr: string | null): string | null {
-  if (!dateStr) return null;
-  const [y, m, d] = dateStr.split('-').map(Number);
-  return `${y}年${m}月${d}日`;
 }
 
 export default async function Timeline() {
@@ -42,7 +36,6 @@ export default async function Timeline() {
 
       <ol className="space-y-10">
         {stories.map((story, i) => {
-          const date = formatDate(story.event_date);
           const leftSide = i % 2 === 0;
           return (
             <li key={story.id} className="relative">
@@ -54,26 +47,7 @@ export default async function Timeline() {
                   leftSide ? 'md:mr-auto' : 'md:ml-auto'
                 }`}
               >
-                <article className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-pink-100 transition hover:shadow-md">
-                  {date && <p className="mb-1 text-xs font-medium text-pink-400">{date}</p>}
-                  <h3 className="text-lg font-bold text-slate-800">{story.title}</h3>
-                  {story.content && (
-                    <p className="mt-2 whitespace-pre-line leading-relaxed text-slate-600">
-                      {story.content}
-                    </p>
-                  )}
-                  {story.image_url && (
-                    <div className="relative mt-3 h-56 w-full overflow-hidden rounded-xl">
-                      <Image
-                        src={story.image_url}
-                        alt={story.title}
-                        fill
-                        sizes="(max-width: 768px) 100vw, 500px"
-                        className="object-cover"
-                      />
-                    </div>
-                  )}
-                </article>
+                <StoryCard story={story} />
               </div>
             </li>
           );
